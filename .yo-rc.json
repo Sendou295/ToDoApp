@@ -1,0 +1,21 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "16.20.2",
+    "sdksVersions": {
+      "@microsoft/microsoft-graph-client": "3.0.2",
+      "@microsoft/teams-js": "2.12.0"
+    },
+    "version": "1.19.0",
+    "libraryName": "to-do-app",
+    "libraryId": "136f849c-23d9-470e-9a3c-2e6267a4cb67",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "ToDoApp",
+    "solutionShortDescription": "ToDoApp description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}

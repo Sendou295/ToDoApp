@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "to-do-app-client-side-solution",
+    "id": "136f849c-23d9-470e-9a3c-2e6267a4cb67",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.19.0"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "ToDoApp description"
+      },
+      "longDescription": {
+        "default": "ToDoApp description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "to-do-app Feature",
+        "description": "The feature that activates elements of the to-do-app solution.",
+        "id": "d17e247e-c43f-4980-82b6-ed95c1e51668",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/to-do-app.sppkg"
+  }
+}
