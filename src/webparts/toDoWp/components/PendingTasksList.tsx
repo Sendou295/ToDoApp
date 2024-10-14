@@ -1,29 +1,40 @@
-import { DetailsList, IColumn, PrimaryButton } from '@fluentui/react';
 import * as React from 'react';
+import { DetailsList, IColumn, PrimaryButton, Stack } from '@fluentui/react';
+import { ToDoTask } from '../../../interface';
 
-interface Task {
-  id: number;
-  name: string;
+export interface PendingTasksListProps {
+  pendingTasks: ToDoTask[];
+  handleCompleteTask: (taskId: number) => Promise<void>;
+  handleDeleteTask: (taskId: number) => Promise<void>;
+  loading?: boolean; // Optional isLoading prop
 }
 
-interface PendingTasksListProps {
-  pendingTasks: Task[];
-  handleCompleteTask: (taskId: number) => void;
-}
-
-const PendingTasksList: React.FC<PendingTasksListProps> = ({ pendingTasks, handleCompleteTask }) => {
-  const columnsPending: IColumn[] = [
-    { key: 'task', name: 'Pending Tasks', fieldName: 'name', minWidth: 100 },
-    { key: 'action', name: 'Actions', minWidth: 100, onRender: (item: Task) => (
-      <PrimaryButton text="Complete" onClick={() => handleCompleteTask(item.id)} />
-    )}
+const PendingTasksList: React.FC<PendingTasksListProps> = ({ pendingTasks, handleCompleteTask, handleDeleteTask, loading }) => {
+  const columns: IColumn[] = [
+    { key: 'task', name: 'Pending Tasks', fieldName: 'Summary', minWidth: 100, maxWidth: 300 },
+    { key: 'pendingDate', name: 'Pending Date', fieldName: 'PendingDate', minWidth: 100, maxWidth: 150 },
+    { 
+      key: 'complete', 
+      name: 'Actions', 
+      minWidth: 100, 
+      onRender: (item: ToDoTask) => (
+        <Stack horizontal tokens={{ childrenGap: 10 }}>
+          <PrimaryButton text="Complete" disabled={loading} onClick={() => handleCompleteTask(item.Id)} />
+          <PrimaryButton text="Delete" disabled={loading} onClick={() => handleDeleteTask(item.Id)} />
+        </Stack>
+      )
+    }
   ];
 
   return (
-    <DetailsList
-      items={pendingTasks}
-      columns={columnsPending}
-    />
+    <div>
+      <h3>Pending Tasks</h3>
+      <DetailsList
+        items={pendingTasks}
+        columns={columns}
+        setKey="set"
+      />
+    </div>
   );
 };
 
