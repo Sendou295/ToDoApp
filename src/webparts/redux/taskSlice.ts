@@ -1,20 +1,107 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { ToDoTask } from '../../interface';
-import { getSP } from '../../pnpjsConfig';
+import { getSP } from './pnpjsConfig';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 
 const LIST_NAME = 'ToDoApp';
 
-// Thunks để fetch tasks từ SharePoint
+// Fetch tasks from SharePoint using Fetch API
 export const fetchTasks = createAsyncThunk<ToDoTask[], WebPartContext>(
     'tasks/fetchTasks',
     async (context: WebPartContext) => {
-        const sp = getSP(context);
-        const items: ToDoTask[] = await sp.web.lists.getByTitle(LIST_NAME).items();
-        return items;
+        const response = await fetch(`${context.pageContext.web.absoluteUrl}/_api/web/lists/getbytitle('${LIST_NAME}')/items`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json; odata=verbose',
+                'Content-Type': 'application/json; charset=utf-8',
+                'odata-version': ''
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        return data.d.results as ToDoTask[];
     }
 );
-// Slice cho tasks
+
+// Thunks to get pending tasks from SharePoint
+export const getPendingTasks = createAsyncThunk<ToDoTask[], WebPartContext>(
+    'tasks/getPendingTasks',
+    async (context: WebPartContext) => {
+        const sp = getSP(context);
+        const items: ToDoTask[] = await sp.web.lists.getByTitle(LIST_NAME).items();
+        return items.filter(task => task.TaskStatus === 'Pending');
+    }
+);
+
+// Thunks to get completed tasks from SharePoint
+export const getCompletedTasks = createAsyncThunk<ToDoTask[], WebPartContext>(
+    'tasks/getCompletedTasks',
+    async (context: WebPartContext) => {
+        const sp = getSP(context);
+        const items: ToDoTask[] = await sp.web.lists.getByTitle(LIST_NAME).items();
+        return items.filter(task => task.TaskStatus === 'Completed');
+    }
+);
+
+// Thunk cho cập nhật task pending
+export const updatePendingTaskOnSharePoint = createAsyncThunk(
+    'tasks/updatePendingTaskOnSharePoint',
+    async (task: ToDoTask) => {
+        const sp = getSP();
+        await sp.web.lists.getByTitle(LIST_NAME).items.getById(task.Id).update({
+            TaskStatus: 'Pending',
+            PendingDate: new Date(),
+            CompletedDate: null,
+        });
+        return { ...task, TaskStatus: 'Pending' as 'Pending', PendingDate: new Date(), CompletedDate: null }; // Trả về task đã cập nhật
+    }
+);
+
+// Thunk cho cập nhật task completed
+export const updateCompletedTaskOnSharePoint = createAsyncThunk(
+    'tasks/updateCompletedTaskOnSharePoint',
+    async (task: ToDoTask) => {
+        const sp = getSP();
+        await sp.web.lists.getByTitle(LIST_NAME).items.getById(task.Id).update({
+            TaskStatus: 'Completed',
+            CompletedDate: new Date(),
+        });
+        return { ...task, TaskStatus: 'Completed' as 'Completed', CompletedDate: new Date() }; // Trả về task đã cập nhật
+    }
+);
+
+// Delete task from SharePoint
+export const deleteTaskFromSharePoint = createAsyncThunk<void, { context: WebPartContext, taskId: number }>(
+    'tasks/deleteTaskFromSharePoint',
+    async ({ context, taskId }) => {
+        const sp = getSP(context);
+        await sp.web.lists.getByTitle(LIST_NAME).items.getById(taskId).delete();
+    }
+);
+export const pad = (num: number) => (num < 10 ? `0${num}` : `${num}`);
+
+export const formatDate = (date: string | Date | null): string => {
+  if (!date) return ''; // Handle null case
+
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+  // Check if dateObj is valid
+  if (isNaN(dateObj.getTime())) return 'Invalid Date';
+
+  const day = pad(dateObj.getDate());
+  const month = pad(dateObj.getMonth() + 1);
+  const year = dateObj.getFullYear();
+  const hours = pad(dateObj.getHours());
+  const minutes = pad(dateObj.getMinutes());
+
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
+
 const taskSlice = createSlice({
     name: 'tasks',
     initialState: {
@@ -25,61 +112,70 @@ const taskSlice = createSlice({
     reducers: {
         addTask: (state, action) => {
             state.pendingTasks.push(action.payload);
-        },
-        updateTask: (state, action) => {
-            let taskIndex = -1; // Mặc định không tìm thấy
-            state.pendingTasks.forEach((t, index) => {
-                if (t.Id === action.payload.Id) {
-                    taskIndex = index; // Lưu chỉ mục nếu tìm thấy
-                }
-            });
-
-            if (taskIndex >= 0) {
-                state.pendingTasks[taskIndex] = action.payload;
-            }
+            state.loading = true;
         },
         deleteTask: (state, action) => {
-            state.pendingTasks = state.pendingTasks.filter(t => t.Id !== action.payload);
-        },
-        completeTask: (state, action) => {
-            // Tìm chỉ mục của task bằng forEach hoặc một phương pháp khác
-            let taskIndex = -1;
-            state.pendingTasks.forEach((t, index) => {
-                if (t.Id === action.payload.Id) {
-                    taskIndex = index;
-                }
-            });
-            // Kiểm tra xem task có tồn tại không
-            if (taskIndex !== -1) {
-                // Chuyển task từ pending sang completed
-                const completedTask: ToDoTask = {
-                    ...state.pendingTasks[taskIndex],
-                    TaskStatus: 'Completed' as 'Completed', // Chỉ định rõ ràng kiểu
-                    CompletedDate: new Date(), // Thiết lập ngày hoàn thành
-                };
-
-                // Thêm task đã hoàn thành vào danh sách
-                state.completedTasks.push(completedTask);
-                state.pendingTasks.splice(taskIndex, 1); // Xóa task khỏi pending
-            }
+            const taskId = action.payload;
+            state.pendingTasks = state.pendingTasks.filter(task => task.Id !== taskId);
+            state.completedTasks = state.completedTasks.filter(task => task.Id !== taskId);
         },
     },
-
     extraReducers: (builder) => {
         builder
-            .addCase(fetchTasks.pending, (state) => {
+            .addCase(getPendingTasks.pending, (state) => {
                 state.loading = true;
             })
-            .addCase(fetchTasks.fulfilled, (state, action) => {
-                state.pendingTasks = action.payload.filter(task => task.TaskStatus === 'Pending');
-                state.completedTasks = action.payload.filter(task => task.TaskStatus === 'Completed');
+            .addCase(getPendingTasks.fulfilled, (state, action) => {
+                state.loading = false;
+                state.pendingTasks = action.payload;
+            })
+            .addCase(getPendingTasks.rejected, (state) => {
                 state.loading = false;
             })
-            .addCase(fetchTasks.rejected, (state) => {
+            .addCase(getCompletedTasks.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(getCompletedTasks.fulfilled, (state, action) => {
+                state.completedTasks = action.payload;
+                state.loading = false;
+            })
+            .addCase(getCompletedTasks.rejected, (state) => {
+                state.loading = false;
+            })
+            .addCase(updatePendingTaskOnSharePoint.fulfilled, (state, action) => {
+                const updatedTask = action.payload;
+                state.pendingTasks.forEach((task, index) => {
+                    if (task.Id === updatedTask.Id) {
+                        state.pendingTasks[index] = {
+                            ...updatedTask,
+                            TaskStatus: updatedTask.TaskStatus as 'Pending', // Chuyển đổi kiểu
+                        };
+                    }
+                })
+                state.loading = false;
+            })
+            .addCase(updateCompletedTaskOnSharePoint.fulfilled, (state, action) => {
+                const updatedTask = action.payload;
+                state.completedTasks.forEach((task, index) => {
+                    if (task.Id === updatedTask.Id) {
+                        state.completedTasks[index] = {
+                            ...updatedTask,
+                            TaskStatus: updatedTask.TaskStatus as 'Completed', // Chuyển đổi kiểu
+                        };
+                    }
+                });
+            })
+            .addCase(deleteTaskFromSharePoint.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(deleteTaskFromSharePoint.fulfilled, (state) => {
+                state.loading = false;
+            })
+            .addCase(deleteTaskFromSharePoint.rejected, (state) => {
                 state.loading = false;
             });
     }
 });
 
-export const { addTask, updateTask, deleteTask,completeTask } = taskSlice.actions;
+export const { addTask, deleteTask } = taskSlice.actions;
 export default taskSlice.reducer;

@@ -6,6 +6,7 @@ export const store = configureStore({
   reducer: {
     tasks: taskReducer,
   },
+  
 });
 
 // Kiểu cho Redux Store

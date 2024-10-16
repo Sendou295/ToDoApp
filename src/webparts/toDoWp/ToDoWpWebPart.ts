@@ -10,7 +10,8 @@ import { IReadonlyTheme } from '@microsoft/sp-component-base';
 
 import * as strings from 'ToDoWpWebPartStrings';
 import { IToDoWpProps } from './components/IToDoWpProps';
-import { ToDoWp } from './components/ToDoWp';
+import ToDoWp from './components/ToDoWp';
+
 
 export interface IToDoWpWebPartProps {
   description: string;

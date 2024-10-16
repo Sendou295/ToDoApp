@@ -1,4 +1,4 @@
-
+//interface.ts
 export interface ToDoTask{
     Id:number;
     Summary: string; 
