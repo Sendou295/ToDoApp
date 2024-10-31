@@ -1,3 +1,4 @@
+// taskSlice.ts
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { ToDoTask } from '../../interface';
 import { getSP } from './pnpjsConfig';
@@ -83,6 +84,7 @@ export const deleteTaskFromSharePoint = createAsyncThunk<void, { context: WebPar
         await sp.web.lists.getByTitle(LIST_NAME).items.getById(taskId).delete();
     }
 );
+
 export const pad = (num: number) => (num < 10 ? `0${num}` : `${num}`);
 
 export const formatDate = (date: string | Date | null): string => {
@@ -102,6 +104,37 @@ export const formatDate = (date: string | Date | null): string => {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 };
 
+export function getSummaryStyle(deadline: Date | null): React.CSSProperties {
+    if (!deadline || !(deadline instanceof Date)) return {}; // Trả về kiểu mặc định nếu deadline là null hoặc không phải Date
+  
+    const now = new Date(); // Ngày hiện tại
+    const nextDay = new Date(now.getTime());
+    nextDay.setDate(now.getDate() + 1);
+    nextDay.setHours(23, 59, 59, 999); // Đặt thời gian thành 23:59:59.999
+  
+    if (deadline.getTime() > now.getTime() && deadline.getTime() < nextDay.getTime()) {
+      return { color: 'blue' }; // Màu tím nếu deadline nằm trong ngày tới
+    } else if (deadline.getTime() < now.getTime()) {
+      return { color: 'red' }; // Màu đỏ nếu deadline đã qua
+    }
+  
+    return {}; // Kiểu mặc định
+}
+
+export const updateTaskInSharePoint = createAsyncThunk(
+    'tasks/updateTaskInSharePoint',
+    async (task: ToDoTask) => {
+        const sp = getSP();
+        await sp.web.lists.getByTitle(LIST_NAME).items.getById(task.Id).update({
+            Summary: task.Summary,
+            Description: task.Description,
+            Deadline: task.Deadline,
+            TaskStatus: task.TaskStatus,
+        });
+        return task; // Trả về task đã cập nhật
+    }
+);
+
 const taskSlice = createSlice({
     name: 'tasks',
     initialState: {
@@ -118,6 +151,19 @@ const taskSlice = createSlice({
             const taskId = action.payload;
             state.pendingTasks = state.pendingTasks.filter(task => task.Id !== taskId);
             state.completedTasks = state.completedTasks.filter(task => task.Id !== taskId);
+        },
+        updateTask: (state, action) => {
+            const updatedTask = action.payload;
+
+            // Cập nhật task trong pendingTasks
+            state.pendingTasks = state.pendingTasks.map(task =>
+                task.Id === updatedTask.id ? updatedTask : task
+            );
+
+            // Cập nhật task trong completedTasks nếu cần
+            state.completedTasks = state.completedTasks.map(task =>
+                task.Id === updatedTask.id ? updatedTask : task
+            );
         },
     },
     extraReducers: (builder) => {
@@ -151,7 +197,7 @@ const taskSlice = createSlice({
                             TaskStatus: updatedTask.TaskStatus as 'Pending', // Chuyển đổi kiểu
                         };
                     }
-                })
+                });
                 state.loading = false;
             })
             .addCase(updateCompletedTaskOnSharePoint.fulfilled, (state, action) => {
@@ -177,5 +223,5 @@ const taskSlice = createSlice({
     }
 });
 
-export const { addTask, deleteTask } = taskSlice.actions;
+export const { addTask, deleteTask ,updateTask } = taskSlice.actions;
 export default taskSlice.reducer;

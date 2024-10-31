@@ -5,4 +5,6 @@ export interface ToDoTask{
     TaskStatus: 'Pending' | 'Completed';
     CompletedDate: Date | null; 
     PendingDate: Date; 
+    Deadline: Date;
+    Description: string;
 }
