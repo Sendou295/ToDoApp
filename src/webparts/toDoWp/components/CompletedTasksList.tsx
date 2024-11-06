@@ -169,7 +169,6 @@ const CompletedTasksList: React.FC<CompletedTasksListProps> = ({ context }) => {
                   <p><strong>Summary:</strong> {props?.item?.Summary}</p>
                   <p><strong>Deadline:</strong> {formatDate(props?.item?.Deadline)}</p>
                   <p><strong>Status:</strong> {props?.item?.TaskStatus}</p>
-                  <p><strong>CompletedDate:</strong> {formatDate(props?.item?.CompletedDate)}</p>
                   <p><strong>Description:</strong> {formatDate(props?.item?.Description)}</p>
                 </div>
               )}
